@@ -217,7 +217,6 @@ def parse_icmpv6_header(hex_data):
     print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
     # print(f"\nicmpv6 hex stream:{hex_data}\n")
 
-# TODO: test by hand
 def parse_tcp_header(hex_data):
     source_port = int(hex_data[:4], 16)
     destination_port = int(hex_data[4:8], 16)
@@ -228,28 +227,53 @@ def parse_tcp_header(hex_data):
 
     data_offset = int(hex_data[24:25], 16)
     reserved = int(hex_data[25:26], 16)
+    reserved_bin = f'{reserved:0{16}b}' 
+
     tcp_flags = int(hex_data[26:28], 16)
+    tcp_flags_bin = f'{tcp_flags:0{8}b}' 
+
     window = int(hex_data[28:32], 16)
 
     checksum = int(hex_data[32:36], 16)
     urgent_pointer = int(hex_data[36:40], 16)
 
     # TODO: calculate tcp header length for option
-    # total_header_length = header_length * 8
+    total_header_length = 40
     options = "N/A"
-    if header_length > 5:
+    if data_offset > 5:
+        total_header_length = (data_offset * 4) * 2
         options = hex_data[40:total_header_length]
-    payload = int(hex_data[4:8], 16)
+    payload = hex_data[total_header_length:]
 
     # TODO: display header fields
-    print(f"ICMPv6 Header:")
-    print(f"  {'Type:':<25} {hex_data[:2]:<20} | {type_field}")
-    print(f"  {'Code:':<25} {hex_data[2:4]:<20} | {code}")
-    print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
+    print(f"TCP Header:")
+    print(f"  {'Source Port:':<25} {hex_data[:4]:<20} | {source_port}")
+    print(f"  {'Destination Port:':<25} {hex_data[4:8]:<20} | {destination_port}")
 
-    print(f"  {'Payload (hex):':<25} {hex_data[8:]:<20}")
+    print(f"  {'Sequence Number:':<25} {hex_data[8:16]:<20} | {sequence_number}")
+    print(f"  {'Acknowledgement Number:':<25} {hex_data[16:24]:<20} | {acknowledgement_number}")
+    
+    print(f"  {'Data Offset:':<25} {hex_data[24:25]:<20} | {data_offset * 4} bytes")
+    print(f"  {'Reserved:':<25} {reserved_bin:<20} | {reserved}")
+    print(f"  {'Flags':<25} {tcp_flags_bin:<20} | {tcp_flags}")
+    print(f"    {'CWR':<28} {tcp_flags_bin[:1]:<15}")
+    print(f"    {'ECE':<28} {tcp_flags_bin[1:2]:<15}")
+    print(f"    {'URG':<28} {tcp_flags_bin[2:3]:<15}")
+    print(f"    {'ACK':<28} {tcp_flags_bin[3:4]:<15}")
+    print(f"    {'PSH':<28} {tcp_flags_bin[4:5]:<15}")
+    print(f"    {'RST':<28} {tcp_flags_bin[5:6]:<15}")
+    print(f"    {'SYN':<28} {tcp_flags_bin[6:7]:<15}")
+    print(f"    {'FIN':<28} {tcp_flags_bin[7:8]:<15}")
 
-    print(f"\nhex stream:{hex_data}\n")
+    print(f"  {'Window Size:':<25} {hex_data[28:32]:<20} | {window}")
+
+    print(f"  {'Checksum:':<25} {hex_data[32:36]:<20} | {checksum}")
+    print(f"  {'Urgent Pointer:':<25} {hex_data[36:40]:<20} | {urgent_pointer}")
+
+    print(f"  {'Options (hex):':<25} {options:<20}")
+    print(f"  {'Payload (hex):':<25} {payload:<20}")
+
+    # print(f"\ntcp hex stream:{hex_data}\n")
 
 # TODO: test
 def parse_udp_header(hex_data):
