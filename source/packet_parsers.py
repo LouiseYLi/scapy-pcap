@@ -123,7 +123,7 @@ def parse_ipv4_header(hex_data):
     payload = hex_data[total_header_length:]
     if protocol == 1:
         parse_icmpv4_header(payload)
-        print("icmpv4\n")
+        # print("icmpv4\n")
     elif protocol == 6:
         parse_tcp_header(payload)
         print("tcp ipv4\n")
@@ -185,39 +185,37 @@ def parse_ipv6_header(hex_data):
         print(f"  {'Unknown protocol:':<25} {hex_data[12:14], 16:<20} | {next_header}")
         print("  No parser available for this protocol.")
 
-# TODO: test by hand
 def parse_icmpv4_header(hex_data):
     type_field = int(hex_data[:2], 16)
     code = int(hex_data[2:4], 16)
     checksum = int(hex_data[4:8], 16)
 
-    payload = hex_data[8:16]
+    rest_of_header = int(hex_data[8:16], 16)
 
     print(f"ICMPv4 Header:")
     print(f"  {'Type:':<25} {hex_data[:2]:<20} | {type_field}")
     print(f"  {'Code:':<25} {hex_data[2:4]:<20} | {code}")
     print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
 
-    print(f"  {'Payload (hex):':<25} {hex_data[8:16]:<20}")
+    print(f"  {'Rest of Header:':<25} {hex_data[8:16]:<20} | {rest_of_header}")
+    print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
+    # print(f"\nicmpv4 stream:{hex_data}\n")
 
-    print(f"\nhex stream:{hex_data}\n")
-
-# TODO: test by hand
 def parse_icmpv6_header(hex_data):
     type_field = int(hex_data[:2], 16)
     code = int(hex_data[2:4], 16)
     checksum = int(hex_data[4:8], 16)
 
-    payload = hex_data[8:]
+    rest_of_header = hex_data[8:16]
 
     print(f"ICMPv6 Header:")
     print(f"  {'Type:':<25} {hex_data[:2]:<20} | {type_field}")
     print(f"  {'Code:':<25} {hex_data[2:4]:<20} | {code}")
     print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
 
-    print(f"  {'Payload (hex):':<25} {hex_data[8:]:<20}")
-
-    print(f"\nhex stream:{hex_data}\n")
+    print(f"  {'Rest of Header:':<25} {hex_data[8:16]:<20} | {rest_of_header}")
+    print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
+    # print(f"\nicmpv6 hex stream:{hex_data}\n")
 
 # TODO: test by hand
 def parse_tcp_header(hex_data):
