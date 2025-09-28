@@ -16,6 +16,8 @@ def parse_ethernet_header(hex_data):
         parse_arp_header(payload)
     elif ether_type == "0800":
         parse_ipv4_header(payload)
+    elif ether_type == "86dd":
+        parse_ipv6_header(payload)
     else:
         print(f"  {'Unknown EtherType:':<25} {ether_type:<20} | {int(ether_type, 16)}")
         print("  No parser available for this EtherType.")
@@ -33,6 +35,9 @@ def format_ip(ip_hex):
         decimal_octet = str(int(hex_byte, 16))
         ip_parts.append(decimal_octet)
     return ".".join(ip_parts)
+
+def format_ipv6(ipv6_hex):
+    return ":".join(ipv6_hex[i:i+4].lower() for i in range(0, 32, 4))
 
 # Parse ARP header
 def parse_arp_header(hex_data):
@@ -88,9 +93,9 @@ def parse_ipv4_header(hex_data):
     destination_address_hex = hex_data[32:40]
     destination_address = format_ip(destination_address_hex)
 
+    total_header_length = header_length * 8
     options = "N/A"
     if header_length > 5:
-        total_header_length = header_length * 8
         options = hex_data[40:total_header_length]
 
     print(f"IPv4 Header:")
@@ -113,9 +118,91 @@ def parse_ipv4_header(hex_data):
     print(f"  {'Source Address:':<25} {hex_data[24:32]:<20} | {source_address}")
     print(f"  {'Destination Address:':<25} {hex_data[32:40]:<20} | {destination_address}")
 
-    print(f"  {'Options:':<25} {options:<20}")
+    print(f"  {'Options (hex):':<25} {options:<20}")
+
+    payload = hex_data[total_header_length:]
+    if protocol == 1:
+        parse_icmpv4_header(payload)
+        print("icmpv4\n")
+    elif protocol == 6:
+        # parse_tcp_header(hex_data)
+        print("tcp ipv4\n")
+
+    elif protocol == 17:
+        # parse_udp_header(hex_data)
+        print("udp ipv4\n")
+
+    else:
+        print(f"  {'Unknown protocol:':<25} {hex_data[18:20], 16:<20} | {protocol}")
+        print("  No parser available for this protocol.")
+    # print(f"\nhex stream:{hex_data}\n")
+    # print(f"\nflag frag:{flags_and_fragment_offset}\n")
+    # print(f"\nbin flag frag:{flags_and_fragment_offset_bin}\n")
+
+
+def parse_ipv6_header(hex_data):
+    version = int(hex_data[:1], 16)
+    type_of_service = int(hex_data[1:3], 16)
+    flow = int(hex_data[3:8], 16)
+
+    payload_length = int(hex_data[8:12], 16)
+    next_header = int(hex_data[12:14], 16)
+    hop_limit = int(hex_data[14:16], 16)
+
+    source_address_hex = hex_data[16:48]
+    source_address = format_ipv6(source_address_hex)
+    destination_address_hex = hex_data[48:80]
+    destination_address = format_ipv6(destination_address_hex)
+
+    # total_header_length = header_length * 8
+    # options = "N/A"
+    # if header_length > 5:
+    #     options = hex_data[40:total_header_length]
+    print(f"IPv6 Header:")
+    print(f"  {'Version:':<25} {hex_data[:1]:<20} | {version}")
+    print(f"  {'Type of Service:':<25} {hex_data[1:3]:<20} | {type_of_service}")
+    print(f"  {'Flow':<25} {hex_data[3:8]:<20} | {flow}")
+
+    print(f"  {'Payload Length:':<25} {hex_data[8:12]:<20} | {payload_length} bytes")
+    print(f"  {'Next Header:':<25} {hex_data[12:14]:<20} | {next_header}")
+    print(f"  {'Hop Limit:':<25} {hex_data[14:16]:<20} | {hop_limit}")
+    
+    print(f"  {'Source Address:':<25} {hex_data[16:48]:<20} | {source_address}")
+    print(f"  {'Destination Address:':<25} {hex_data[48:80]:<20} | {destination_address}")
 
     print(f"\nhex stream:{hex_data}\n")
-    print(f"\nflag frag:{flags_and_fragment_offset}\n")
-    print(f"\nbin flag frag:{flags_and_fragment_offset_bin}\n")
+
+    payload = hex_data[80:]
+    if next_header == 58:
+        # parse_icmpv6_header(next_header_data)
+        print("icmpv6")
+
+    elif next_header == 6:
+        # parse_tcp_header(hex_data)
+        print("ipv6 tcp")
+
+    elif next_header == 17:
+        # parse_udp_header(hex_data)
+        print("ipv6 udp")
+
+    else:
+        print(f"  {'Unknown protocol:':<25} {hex_data[12:14], 16:<20} | {next_header}")
+        print("  No parser available for this protocol.")
+
+# TODO: test by hand
+def parse_icmpv4_header(hex_data):
+    type_field = int(hex_data[:2], 16)
+    code = int(hex_data[2:4], 16)
+    checksum = int(hex_data[4:8], 16)
+
+    payload = hex_data[8:16]
+
+    print(f"ICMPv4 Header:")
+    print(f"  {'Type:':<25} {hex_data[:2]:<20} | {type_field}")
+    print(f"  {'Code:':<25} {hex_data[2:4]:<20} | {code}")
+    print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
+
+    print(f"  {'Payload (hex):':<25} {hex_data[8:16]:<20}")
+
+    print(f"\nhex stream:{hex_data}\n")
 
