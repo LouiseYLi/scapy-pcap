@@ -206,3 +206,20 @@ def parse_icmpv4_header(hex_data):
 
     print(f"\nhex stream:{hex_data}\n")
 
+# TODO: test by hand
+def parse_icmpv6_header(hex_data):
+    type_field = int(hex_data[:2], 16)
+    code = int(hex_data[2:4], 16)
+    checksum = int(hex_data[4:8], 16)
+
+    payload = hex_data[8:]
+
+    print(f"ICMPv6 Header:")
+    print(f"  {'Type:':<25} {hex_data[:2]:<20} | {type_field}")
+    print(f"  {'Code:':<25} {hex_data[2:4]:<20} | {code}")
+    print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
+
+    print(f"  {'Payload (hex):':<25} {hex_data[8:]:<20}")
+
+    print(f"\nhex stream:{hex_data}\n")
+
