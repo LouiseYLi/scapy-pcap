@@ -14,6 +14,8 @@ def parse_ethernet_header(hex_data):
     # Route payload based on EtherType
     if ether_type == "0806":  # ARP
         parse_arp_header(payload)
+    elif ether_type == "0800":
+        parse_ipv4_header(payload)
     else:
         print(f"  {'Unknown EtherType:':<25} {ether_type:<20} | {int(ether_type, 16)}")
         print("  No parser available for this EtherType.")
@@ -65,7 +67,55 @@ def parse_arp_header(hex_data):
     print(f"  {'Target Hardware Address:':<25} {hex_data[36:48]:<20} | {target_hardware_address}")
     print(f"  {'Target Protocol Address:':<25} {hex_data[48:56]:<20} | {target_protocol_address}")
 
-    # print(f"\nhex stream:{hex_data}\n")
     # print(f"\ntest:{protocol_type}\n")
 
+def parse_ipv4_header(hex_data):
+    version = int(hex_data[:1], 16)
+    header_length = int(hex_data[1:2], 16)
+    type_of_service = int(hex_data[2:4], 16)
+    total_length = int(hex_data[4:8], 16)
+
+    identification = int(hex_data[8:12], 16)
+    flags_and_fragment_offset = int(hex_data[12:16], 16)
+    flags_and_fragment_offset_bin = f'{flags_and_fragment_offset:0{16}b}' 
+
+    time_to_live = int(hex_data[16:18], 16)
+    protocol = int(hex_data[18:20], 16)
+    header_checksum = int(hex_data[20:24], 16)
+
+    source_address_hex = hex_data[24:32]
+    source_address = format_ip(source_address_hex)
+    destination_address_hex = hex_data[32:40]
+    destination_address = format_ip(destination_address_hex)
+
+    options = "N/A"
+    if header_length > 5:
+        total_header_length = header_length * 8
+        options = hex_data[40:total_header_length]
+
+    print(f"IPv4 Header:")
+    print(f"  {'Version:':<25} {hex_data[:1]:<20} | {version}")
+    print(f"  {'Header Length:':<25} {hex_data[1:2]:<20} | {header_length} bytes")
+    print(f"  {'Type of Service:':<25} {hex_data[2:4]:<20} | {type_of_service}")
+    print(f"  {'Total Length:':<25} {hex_data[4:8]:<20} | {total_length} bytes")
+
+    print(f"  {'Identification:':<25} {hex_data[8:12]:<20} | {identification}")
+    print(f"  {'Flags & Fragment Offset':<25} {hex_data[12:16]:<20} | {flags_and_fragment_offset}")
+    print(f"    {'Reserved':<28} {flags_and_fragment_offset_bin[:1]:<15}")
+    print(f"    {'DF (Do not Fragment)':<28} {flags_and_fragment_offset_bin[1:2]:<15}")
+    print(f"    {'MF (More Fragments)':<28} {flags_and_fragment_offset_bin[2:3]:<15}")
+    print(f"    {'Fragment Offset':<28} {hex(int(flags_and_fragment_offset_bin[3:16], 2)):<15} | {int(flags_and_fragment_offset_bin[3:16], 2)}")
+
+    print(f"  {'Time to Live:':<25} {hex_data[16:18]:<20} | {time_to_live}")
+    print(f"  {'Protocol:':<25} {hex_data[18:20]:<20} | {protocol}")
+    print(f"  {'Header Checksum:':<25} {hex_data[20:24]:<20} | {header_checksum}")
+
+    print(f"  {'Source Address:':<25} {hex_data[24:32]:<20} | {source_address}")
+    print(f"  {'Destination Address:':<25} {hex_data[32:40]:<20} | {destination_address}")
+
+    print(f"  {'Options:':<25} {options:<20}")
+
+    print(f"\nhex stream:{hex_data}\n")
+    print(f"\nflag frag:{flags_and_fragment_offset}\n")
+    print(f"\nbin flag frag:{flags_and_fragment_offset_bin}\n")
 
