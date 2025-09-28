@@ -125,11 +125,11 @@ def parse_ipv4_header(hex_data):
         parse_icmpv4_header(payload)
         print("icmpv4\n")
     elif protocol == 6:
-        # parse_tcp_header(hex_data)
+        parse_tcp_header(payload)
         print("tcp ipv4\n")
 
     elif protocol == 17:
-        # parse_udp_header(hex_data)
+        parse_udp_header(payload)
         print("udp ipv4\n")
 
     else:
@@ -154,10 +154,6 @@ def parse_ipv6_header(hex_data):
     destination_address_hex = hex_data[48:80]
     destination_address = format_ipv6(destination_address_hex)
 
-    # total_header_length = header_length * 8
-    # options = "N/A"
-    # if header_length > 5:
-    #     options = hex_data[40:total_header_length]
     print(f"IPv6 Header:")
     print(f"  {'Version:':<25} {hex_data[:1]:<20} | {version}")
     print(f"  {'Type of Service:':<25} {hex_data[1:3]:<20} | {type_of_service}")
@@ -174,15 +170,15 @@ def parse_ipv6_header(hex_data):
 
     payload = hex_data[80:]
     if next_header == 58:
-        # parse_icmpv6_header(next_header_data)
+        parse_icmpv6_header(payload)
         print("icmpv6")
 
     elif next_header == 6:
-        # parse_tcp_header(hex_data)
+        parse_tcp_header(payload)
         print("ipv6 tcp")
 
     elif next_header == 17:
-        # parse_udp_header(hex_data)
+        parse_udp_header(payload)
         print("ipv6 udp")
 
     else:
@@ -220,6 +216,60 @@ def parse_icmpv6_header(hex_data):
     print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
 
     print(f"  {'Payload (hex):':<25} {hex_data[8:]:<20}")
+
+    print(f"\nhex stream:{hex_data}\n")
+
+# TODO: test by hand
+def parse_tcp_header(hex_data):
+    source_port = int(hex_data[:4], 16)
+    destination_port = int(hex_data[4:8], 16)
+    
+    sequence_number = int(hex_data[8:16], 16)
+
+    acknowledgement_number = int(hex_data[16:24], 16)
+
+    data_offset = int(hex_data[24:25], 16)
+    reserved = int(hex_data[25:26], 16)
+    tcp_flags = int(hex_data[26:28], 16)
+    window = int(hex_data[28:32], 16)
+
+    checksum = int(hex_data[32:36], 16)
+    urgent_pointer = int(hex_data[36:40], 16)
+
+    # TODO: calculate tcp header length for option
+    # total_header_length = header_length * 8
+    options = "N/A"
+    if header_length > 5:
+        options = hex_data[40:total_header_length]
+    payload = int(hex_data[4:8], 16)
+
+    # TODO: display header fields
+    print(f"ICMPv6 Header:")
+    print(f"  {'Type:':<25} {hex_data[:2]:<20} | {type_field}")
+    print(f"  {'Code:':<25} {hex_data[2:4]:<20} | {code}")
+    print(f"  {'Checksum':<25} {hex_data[4:8]:<20} | {checksum}")
+
+    print(f"  {'Payload (hex):':<25} {hex_data[8:]:<20}")
+
+    print(f"\nhex stream:{hex_data}\n")
+
+# TODO: test
+def parse_udp_header(hex_data):
+    source_port = int(hex_data[:4], 16)
+    destination_port = int(hex_data[4:8], 16)
+    
+    length = int(hex_data[8:12], 16)
+    checksum = int(hex_data[12:16], 16)
+
+    payload = hex_data[16:]
+
+    print(f"UDP Header:")
+    print(f"  {'Source Port:':<25} {hex_data[:4]:<20} | {source_port}")
+    print(f"  {'Destination Port:':<25} {hex_data[4:8]:<20} | {destination_port}")
+    print(f"  {'Length':<25} {hex_data[8:12]:<20} | {length}")
+    print(f"  {'Checksum':<25} {hex_data[12:16]:<20} | {checksum}")
+
+    print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
 
     print(f"\nhex stream:{hex_data}\n")
 
