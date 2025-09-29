@@ -22,6 +22,7 @@ def parse_ethernet_header(hex_data):
         print(f"  {'Unknown EtherType:':<25} {ether_type:<20} | {int(ether_type, 16)}")
         print("  No parser available for this EtherType.")
 
+    # print(f"\n hex stream {hex_data}")
     return ether_type, payload
 
 
@@ -100,7 +101,7 @@ def parse_ipv4_header(hex_data):
 
     print(f"IPv4 Header:")
     print(f"  {'Version:':<25} {hex_data[:1]:<20} | {version}")
-    print(f"  {'Header Length:':<25} {hex_data[1:2]:<20} | {header_length} bytes")
+    print(f"  {'Header Length:':<25} {hex_data[1:2]:<20} | {header_length * 4} bytes")
     print(f"  {'Type of Service:':<25} {hex_data[2:4]:<20} | {type_of_service}")
     print(f"  {'Total Length:':<25} {hex_data[4:8]:<20} | {total_length} bytes")
 
@@ -123,15 +124,10 @@ def parse_ipv4_header(hex_data):
     payload = hex_data[total_header_length:]
     if protocol == 1:
         parse_icmpv4_header(payload)
-        # print("icmpv4\n")
     elif protocol == 6:
         parse_tcp_header(payload)
-        print("tcp ipv4\n")
-
     elif protocol == 17:
         parse_udp_header(payload)
-        print("udp ipv4\n")
-
     else:
         print(f"  {'Unknown protocol:':<25} {hex_data[18:20], 16:<20} | {protocol}")
         print("  No parser available for this protocol.")
@@ -166,21 +162,15 @@ def parse_ipv6_header(hex_data):
     print(f"  {'Source Address:':<25} {hex_data[16:48]:<20} | {source_address}")
     print(f"  {'Destination Address:':<25} {hex_data[48:80]:<20} | {destination_address}")
 
-    print(f"\nhex stream:{hex_data}\n")
+    # print(f"\nhex stream:{hex_data}\n")
 
     payload = hex_data[80:]
     if next_header == 58:
         parse_icmpv6_header(payload)
-        print("icmpv6")
-
     elif next_header == 6:
         parse_tcp_header(payload)
-        print("ipv6 tcp")
-
     elif next_header == 17:
         parse_udp_header(payload)
-        print("ipv6 udp")
-
     else:
         print(f"  {'Unknown protocol:':<25} {hex_data[12:14], 16:<20} | {next_header}")
         print("  No parser available for this protocol.")
@@ -237,7 +227,6 @@ def parse_tcp_header(hex_data):
     checksum = int(hex_data[32:36], 16)
     urgent_pointer = int(hex_data[36:40], 16)
 
-    # TODO: calculate tcp header length for option
     total_header_length = 40
     options = "N/A"
     if data_offset > 5:
@@ -245,7 +234,6 @@ def parse_tcp_header(hex_data):
         options = hex_data[40:total_header_length]
     payload = hex_data[total_header_length:]
 
-    # TODO: display header fields
     print(f"TCP Header:")
     print(f"  {'Source Port:':<25} {hex_data[:4]:<20} | {source_port}")
     print(f"  {'Destination Port:':<25} {hex_data[4:8]:<20} | {destination_port}")
@@ -271,11 +259,13 @@ def parse_tcp_header(hex_data):
     print(f"  {'Urgent Pointer:':<25} {hex_data[36:40]:<20} | {urgent_pointer}")
 
     print(f"  {'Options (hex):':<25} {options:<20}")
-    print(f"  {'Payload (hex):':<25} {payload:<20}")
 
+    if source_port == 53 or destination_port == 53:
+        parse_dns_header(payload)
+    else:
+        print(f"  {'Payload (hex):':<25} {payload:<20}")
     # print(f"\ntcp hex stream:{hex_data}\n")
 
-# TODO: test
 def parse_udp_header(hex_data):
     source_port = int(hex_data[:4], 16)
     destination_port = int(hex_data[4:8], 16)
@@ -291,7 +281,115 @@ def parse_udp_header(hex_data):
     print(f"  {'Length':<25} {hex_data[8:12]:<20} | {length}")
     print(f"  {'Checksum':<25} {hex_data[12:16]:<20} | {checksum}")
 
-    print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
+    if source_port == 53 or destination_port == 53:
+        parse_dns_header(hex_data[16:])
+    else:
+        print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
+    # print(f"\nudp hex stream:{hex_data}\n")
 
-    print(f"\nhex stream:{hex_data}\n")
+def parse_dns_header(hex_data):
+    def read_name(data, offset):
+        labels = []
+        jumped = False
+        original_offset = offset
+        while True:
+            length = int(data[offset:offset+2], 16)
+            if length == 0:
+                offset += 2
+                break
+            if (length & 0xC0) == 0xC0:  # pointer
+                pointer = int(data[offset:offset+4], 16) & 0x3FFF
+                _, name = read_name(data, pointer * 2)  # hex string is double length
+                labels.append(name)
+                offset += 4
+                jumped = True
+                break
+            else:
+                offset += 2
+                label = bytes.fromhex(data[offset:offset + length*2]).decode()
+                labels.append(label)
+                offset += length * 2
+        return (offset if not jumped else original_offset + 4, ".".join(labels))
+        
+    def parse_rr(section_name, count, offset):
+        for i in range(count):
+            offset, name = read_name(payload, offset)
+            rtype = int(payload[offset:offset+4], 16)
+            rclass = int(payload[offset+4:offset+8], 16)
+            ttl = int(payload[offset+8:offset+16], 16)
+            rdlength = int(payload[offset+16:offset+20], 16)
+            rdata = payload[offset+20:offset+20+rdlength*2]
+            offset += 20 + rdlength*2
+
+            print(f"\n{section_name} {i+1}:")
+            print(f"  {'NAME:':<28}{name}")
+            print(f"  {'TYPE':<28}{rtype}")
+            print(f"  {'CLASS':<28}{rclass}")
+            print(f"  {'TTL':<28}{ttl}")
+            print(f"  {'RDLENGTH':<28}{rdlength}")
+
+            if rtype == 41:
+                udp_size = rclass
+                ext_rcode = (ttl >> 24) & 0xFF
+                edns_ver = (ttl >> 16) & 0xFF
+                z_flags = ttl & 0xFFFF
+                print(f"  {'OPT UDP size:':<28}{udp_size}")
+                print(f"  {'EXT RCODE:':<28}{ext_rcode}")
+                print(f"  {'EDNS ver:':<28}{edns_ver}")
+                print(f"  {'Flags:':<28}{z_flags:016b}")
+                print(f"  {'RDATA:':<28}{rdata}")
+            else:
+                print(f"  {'RDATA:':<28}{rdata}")
+        return offset
+    transaction_id = int(hex_data[:4], 16)
+    flags = int(hex_data[4:8], 16)
+    flags_bin = f'{flags:0{16}b}' 
+
+    number_of_questions = int(hex_data[8:12], 16)
+    number_of_answers = int(hex_data[12:16], 16)
+
+    number_of_authority_rrs = int(hex_data[16:20], 16)
+    number_of_additional_rrs = int(hex_data[20:24], 16)
+
+    payload = hex_data[24:]
+    offset = 0
+
+    print(f"DNS Header:")
+    print(f"  {'Transaction ID:':<25} {hex_data[:4]:<20} | {transaction_id}")
+    print(f"  {'Flags:':<25} {hex_data[4:8]:<20} | {flags_bin}")
+    print(f"    {'QR':<28} {flags_bin[:1]:<15}")
+    print(f"    {'OPCODE':<28} {flags_bin[1:5]:<15}")
+    print(f"    {'AA':<28} {flags_bin[5:6]:<15}")
+    print(f"    {'TC':<28} {flags_bin[6:7]:<15}")
+    print(f"    {'RD':<28} {flags_bin[7:8]:<15}")
+    print(f"    {'RA':<28} {flags_bin[8:9]:<15}")
+    print(f"    {'Z':<28} {flags_bin[9:10]:<15}")
+    print(f"    {'AD':<28} {flags_bin[10:11]:<15}")
+    print(f"    {'CD':<28} {flags_bin[11:12]:<15}")
+    print(f"    {'RCODE':<28} {flags_bin[12:]:<15}")
+
+    print(f"  {'Questions':<25} {hex_data[8:12]:<20} | {number_of_questions}")
+    print(f"  {'Answers':<25} {hex_data[12:16]:<20} | {number_of_answers}")
+
+    print(f"  {'Authority RRs':<25} {hex_data[16:20]:<20} | {number_of_authority_rrs}")
+    print(f"  {'Additional RRs':<25} {hex_data[20:24]:<20} | {number_of_additional_rrs}")
+
+    print(f"  {'Payload (hex):':<25} {hex_data[24:]:<20}")
+
+    # Parse Questions
+    for i in range(number_of_questions):
+        offset, qname = read_name(payload, offset)
+        qtype = int(payload[offset:offset+4], 16)
+        qclass = int(payload[offset+4:offset+8], 16)
+        offset += 8
+        print(f"\nQuestion {i+1}:")
+        print(f"  QNAME:   {qname}")
+        print(f"  QTYPE:   {qtype}")
+        print(f"  QCLASS:  {qclass}")
+
+    # Parse Answers
+    offset = parse_rr("Answer", number_of_answers, offset)
+    offset = parse_rr("Authority", number_of_authority_rrs, offset)
+    offset = parse_rr("Additional", number_of_additional_rrs, offset)
+    # print(f"\ndns hex stream:{hex_data}\n")
 
