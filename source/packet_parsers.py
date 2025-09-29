@@ -25,10 +25,11 @@ def parse_ethernet_header(hex_data):
     # print(f"\n hex stream {hex_data}")
     return ether_type, payload
 
-
+# Formats 12-char hex string (e.g., '1a2b3c4d5e6f') into standard colon-separated MAC address.
 def format_mac(mac_hex):
     return ":".join(mac_hex[i:i+2] for i in range(0, 12, 2))
 
+# Converts an 8-char hex IPv4 string (e.g., '0a0000a6') to dotted-decimal format.
 def format_ip(ip_hex):
     ip_parts = []
     for i in range(0, 8, 2):
@@ -37,6 +38,7 @@ def format_ip(ip_hex):
         ip_parts.append(decimal_octet)
     return ".".join(ip_parts)
 
+# Formats a 32-char hex IPv6 string into standard colon-separated notation (no compression).
 def format_ipv6(ipv6_hex):
     return ":".join(ipv6_hex[i:i+4].lower() for i in range(0, 32, 4))
 
@@ -75,6 +77,7 @@ def parse_arp_header(hex_data):
 
     # print(f"\ntest:{protocol_type}\n")
 
+# Parse IPv4 header
 def parse_ipv4_header(hex_data):
     version = int(hex_data[:1], 16)
     header_length = int(hex_data[1:2], 16)
@@ -135,7 +138,7 @@ def parse_ipv4_header(hex_data):
     # print(f"\nflag frag:{flags_and_fragment_offset}\n")
     # print(f"\nbin flag frag:{flags_and_fragment_offset_bin}\n")
 
-
+# Parse IPv6 header
 def parse_ipv6_header(hex_data):
     version = int(hex_data[:1], 16)
     type_of_service = int(hex_data[1:3], 16)
@@ -175,6 +178,7 @@ def parse_ipv6_header(hex_data):
         print(f"  {'Unknown protocol:':<25} {hex_data[12:14], 16:<20} | {next_header}")
         print("  No parser available for this protocol.")
 
+# Parse ICMPv4 header
 def parse_icmpv4_header(hex_data):
     type_field = int(hex_data[:2], 16)
     code = int(hex_data[2:4], 16)
@@ -191,6 +195,7 @@ def parse_icmpv4_header(hex_data):
     print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
     # print(f"\nicmpv4 stream:{hex_data}\n")
 
+# Parse ICMPv6 header
 def parse_icmpv6_header(hex_data):
     type_field = int(hex_data[:2], 16)
     code = int(hex_data[2:4], 16)
@@ -207,6 +212,7 @@ def parse_icmpv6_header(hex_data):
     print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
     # print(f"\nicmpv6 hex stream:{hex_data}\n")
 
+# Parse TCP header
 def parse_tcp_header(hex_data):
     source_port = int(hex_data[:4], 16)
     destination_port = int(hex_data[4:8], 16)
@@ -266,6 +272,7 @@ def parse_tcp_header(hex_data):
         print(f"  {'Payload (hex):':<25} {payload:<20}")
     # print(f"\ntcp hex stream:{hex_data}\n")
 
+# Parse UDP header
 def parse_udp_header(hex_data):
     source_port = int(hex_data[:4], 16)
     destination_port = int(hex_data[4:8], 16)
@@ -287,6 +294,7 @@ def parse_udp_header(hex_data):
         print(f"  {'Payload (hex):':<25} {hex_data[16:]:<20}")
     # print(f"\nudp hex stream:{hex_data}\n")
 
+# Parse DNS header
 def parse_dns_header(hex_data):
     def read_name(data, offset):
         labels = []
@@ -387,7 +395,7 @@ def parse_dns_header(hex_data):
         print(f"  QTYPE:   {qtype}")
         print(f"  QCLASS:  {qclass}")
 
-    # Parse Answers
+    # Parse answer, authority, and additional sections
     offset = parse_rr("Answer", number_of_answers, offset)
     offset = parse_rr("Authority", number_of_authority_rrs, offset)
     offset = parse_rr("Additional", number_of_additional_rrs, offset)
